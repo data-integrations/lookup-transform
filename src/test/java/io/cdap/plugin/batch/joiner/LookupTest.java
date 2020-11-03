@@ -18,7 +18,6 @@ package io.cdap.plugin.batch.joiner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.table.Table;
@@ -38,7 +37,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
@@ -134,11 +132,6 @@ public class LookupTest extends ETLBatchTestBase {
         .set("id", 1)
         .set("customer_id", 1)
         .set("phone_number", "555-555-555")
-        .build(),
-      StructuredRecord.builder(PHONE_NUMBERS_SCHEMA)
-        .set("id", 2)
-        .set("customer_id", 1)
-        .set("phone_number", "333-333-333")
         .build()
     );
     MockSource.writeInput(phoneNumbersManager, input);
@@ -151,26 +144,37 @@ public class LookupTest extends ETLBatchTestBase {
         .set("customer_id", 1)
         .set("first_name", "John")
         .set("last_name", "Doe")
+        .build(),
+      StructuredRecord.builder(CUSTOMER_SCHEMA)
+        .set("customer_id", 2)
+        .set("first_name", "Jane")
+        .set("last_name", "Doe")
         .build()
     );
     MockSource.writeInput(customerManager, input);
   }
 
-  private StructuredRecord getJohnDoeRecord(Schema outputSchema) {
+  private StructuredRecord getExpectedRecord(Schema outputSchema, int id, String name, String phoneNumber) {
     return StructuredRecord.builder(outputSchema)
-      .set("customer_id", 1)
-      .set("first_name", "John")
+      .set("customer_id", id)
+      .set("first_name", name)
       .set("last_name", "Doe")
-      .set("phone", "555-555-555")
+      .set("phone", phoneNumber)
       .build();
   }
 
   private Void verifyLookupOutput(Schema outputSchema, Table table) {
     try {
-      Set<StructuredRecord> records = Sets.newHashSet(readOutput(table));
-      String expected = StructuredRecordStringConverter.toJsonString(getJohnDoeRecord(outputSchema));
-      final String actual = StructuredRecordStringConverter.toJsonString(records.iterator().next());
-      Assert.assertEquals(expected, actual);
+      List<StructuredRecord> structuredRecords = readOutput(table);
+      String expectedFirstRecord = StructuredRecordStringConverter.toJsonString(
+        getExpectedRecord(outputSchema, 1, "John", "555-555-555"));
+      String expectedSecondRecord = StructuredRecordStringConverter.toJsonString(
+        getExpectedRecord(outputSchema, 2, "Jane", null));
+      Assert.assertEquals(structuredRecords.size(), 2);
+      final String actualFirstRecord = StructuredRecordStringConverter.toJsonString(structuredRecords.get(0));
+      final String actualSecondRecord = StructuredRecordStringConverter.toJsonString(structuredRecords.get(1));
+      Assert.assertEquals(expectedFirstRecord, actualFirstRecord);
+      Assert.assertEquals(expectedSecondRecord, actualSecondRecord);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
