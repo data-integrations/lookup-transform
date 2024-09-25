@@ -33,7 +33,7 @@
     <spark.version>2.1.3</spark.version>
     <logback.version>1.0.9</logback.version>
     <guava.version>13.0.1</guava.version>
-    <hadoop.version>2.3.0</hadoop.version>
+    <hadoop.version>3.4.0</hadoop.version>
 
     <surefire.redirectTestOutputToFile>true</surefire.redirectTestOutputToFile>
   </properties>
